@@ -31,19 +31,19 @@ function scoreOpportunity({ avgPrice = 0, bestCogs = 0, competitorCount = 0, que
   return { demand, competition, margin, total, marginPct };
 }
 
-async function googleSearch(query, apiKey, cseId, num = 10) {
-  const url = new URL('https://www.googleapis.com/customsearch/v1');
+async function serpApiSearch(query, apiKey, num = 10) {
+  const url = new URL('https://serpapi.com/search.json');
+  url.searchParams.set('engine', 'google');
   url.searchParams.set('key', apiKey);
-  url.searchParams.set('cx', cseId);
   url.searchParams.set('q', query);
   url.searchParams.set('num', String(Math.min(Math.max(num, 1), 10)));
   const response = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Google search failed (${response.status}): ${text.slice(0, 180)}`);
+    throw new Error(`SerpApi search failed (${response.status}): ${text.slice(0, 180)}`);
   }
   const data = await response.json();
-  return data.items || [];
+  return data.organic_results || [];
 }
 
 function compactSearchItems(items) {
@@ -144,7 +144,7 @@ function buildFallback(query, groups) {
       name: nicheName,
       industry: /ebook|template|course|guide|digital/i.test(query) ? 'Digital Products' : 'Consumer Products',
       type: /ebook|template|course|guide|digital/i.test(query) ? 'digital' : 'physical',
-      monthly_searches: 'Google-backed demand detected',
+      monthly_searches: 'Search-backed demand detected',
       market_size_usd: Math.round(avgPrice * 1000),
       growth_rate_pct: 18,
       trend: 'rising',
@@ -180,7 +180,7 @@ function buildFallback(query, groups) {
       repeat_purchase: !/digital|ebook|template|guide|course/i.test(query)
     },
     market_insights: [
-      'Google results show repeated commercial intent around this query.',
+      'Search results show repeated commercial intent around this query.',
       'Pricing spreads suggest room for premium positioning or a stronger bundle.',
       'Supplier search results indicate possible margin if shipping and quality are validated.'
     ],
@@ -230,7 +230,7 @@ function buildFallback(query, groups) {
 
 async function enrichWithAnthropic(payload, apiKey) {
   const sourceDigest = JSON.stringify(payload.sources).slice(0, 120000);
-  const prompt = `You are a market-intelligence analyst. Convert the live Google search findings below into strict JSON for a dashboard. Keep competitor and supplier names grounded in the provided sources. If exact values are uncertain, estimate conservatively and keep claims modest. Return ONLY valid JSON with this shape: {"niches":[{"name":"","industry":"","type":"physical_or_digital","monthly_searches":"","market_size_usd":0,"growth_rate_pct":0,"trend":"rising","top_platforms":[],"real_competitors":[],"avg_sell_price":0,"demand_score":0,"competition_score":0,"margin_score":0,"opportunity_score":0,"why_now":""}],"products":[{"rank":1,"name":"","brand":"","platform":"","category":"","sku_type":"physical_or_digital","avg_price":0,"low_price":0,"high_price":0,"units_sold_monthly":"","rating":0,"reviews":0,"trend":"rising","margin_pct":0,"source_cost_est":0,"why_hot":""}],"competitors":[{"rank":1,"brand":"","website":"","market_share_pct":0,"avg_price":0,"strength_score":0,"weakness":"","gap_opportunity":"","social_following":"","founded_year":0,"key_products":[]}],"suppliers":[{"name":"","platform":"","country":"","cost_per_unit":0,"moq":"","lead_time_days":0,"quality_rating":0,"sample_available":true,"certifications":[],"notes":""}],"market_gap":"","differentiation_angle":"","best_cogs":0,"recommended_supplier":"","estimated_margin":0,"audience":{"primary_demographic":"","age_range":"","gender_split":"","income_level":"","core_pain":"","core_desire":"","buying_trigger":"","platforms":[],"content_they_consume":[],"buying_frequency":"","repeat_purchase":true},"market_insights":[],"ad_channels":[],"offer":{"headline":"","subheadline":"","product_name":"","your_price":0,"market_price":0,"perceived_value":0,"value_stack":[{"item":"","value":0,"description":""}],"guarantee":"","cta":"","urgency_hook":"","pricing_angle":"","target_roas":0},"launch":{"platform":"","ad_format":"","target_audience":"","content_angle":"","first_month_goal":"","kpis":[],"outreach_message":""},"projection":{"break_even_units":0,"month1_revenue":0,"month3_revenue":0,"year1_revenue":0,"margin_pct":0}}.\n\nUser query: ${payload.query}\n\nLive sources:\n${sourceDigest}`;
+  const prompt = `You are a market-intelligence analyst. Convert the live search findings below into strict JSON for a dashboard. Keep competitor and supplier names grounded in the provided sources. If exact values are uncertain, estimate conservatively and keep claims modest. Return ONLY valid JSON with this shape: {"niches":[{"name":"","industry":"","type":"physical_or_digital","monthly_searches":"","market_size_usd":0,"growth_rate_pct":0,"trend":"rising","top_platforms":[],"real_competitors":[],"avg_sell_price":0,"demand_score":0,"competition_score":0,"margin_score":0,"opportunity_score":0,"why_now":""}],"products":[{"rank":1,"name":"","brand":"","platform":"","category":"","sku_type":"physical_or_digital","avg_price":0,"low_price":0,"high_price":0,"units_sold_monthly":"","rating":0,"reviews":0,"trend":"rising","margin_pct":0,"source_cost_est":0,"why_hot":""}],"competitors":[{"rank":1,"brand":"","website":"","market_share_pct":0,"avg_price":0,"strength_score":0,"weakness":"","gap_opportunity":"","social_following":"","founded_year":0,"key_products":[]}],"suppliers":[{"name":"","platform":"","country":"","cost_per_unit":0,"moq":"","lead_time_days":0,"quality_rating":0,"sample_available":true,"certifications":[],"notes":""}],"market_gap":"","differentiation_angle":"","best_cogs":0,"recommended_supplier":"","estimated_margin":0,"audience":{"primary_demographic":"","age_range":"","gender_split":"","income_level":"","core_pain":"","core_desire":"","buying_trigger":"","platforms":[],"content_they_consume":[],"buying_frequency":"","repeat_purchase":true},"market_insights":[],"ad_channels":[],"offer":{"headline":"","subheadline":"","product_name":"","your_price":0,"market_price":0,"perceived_value":0,"value_stack":[{"item":"","value":0,"description":""}],"guarantee":"","cta":"","urgency_hook":"","pricing_angle":"","target_roas":0},"launch":{"platform":"","ad_format":"","target_audience":"","content_angle":"","first_month_goal":"","kpis":[],"outreach_message":""},"projection":{"break_even_units":0,"month1_revenue":0,"month3_revenue":0,"year1_revenue":0,"margin_pct":0}}.\n\nUser query: ${payload.query}\n\nLive sources:\n${sourceDigest}`;
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -273,20 +273,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing query. Send { "query": "your market" }.' });
     }
 
-    const googleApiKey = process.env.GOOGLE_API_KEY;
-    const googleCseId = process.env.GOOGLE_CSE_ID;
+    const serpApiKey = process.env.SERPAPI_API_KEY;
 
-    if (!googleApiKey || !googleCseId) {
+    if (!serpApiKey) {
       return res.status(500).json({
-        error: 'Missing GOOGLE_API_KEY or GOOGLE_CSE_ID environment variables.'
+        error: 'Missing SERPAPI_API_KEY environment variable.'
       });
     }
 
     const [demand, pricing, suppliers, audience] = await Promise.all([
-      googleSearch(`${query} demand trends buyers best selling`, googleApiKey, googleCseId, 8),
-      googleSearch(`${query} price buy online best seller`, googleApiKey, googleCseId, 8),
-      googleSearch(`${query} wholesale supplier manufacturer bulk`, googleApiKey, googleCseId, 8),
-      googleSearch(`${query} buyer pain points audience who buys`, googleApiKey, googleCseId, 8)
+      serpApiSearch(`${query} demand trends buyers best selling`, serpApiKey, 8),
+      serpApiSearch(`${query} price buy online best seller`, serpApiKey, 8),
+      serpApiSearch(`${query} wholesale supplier manufacturer bulk`, serpApiKey, 8),
+      serpApiSearch(`${query} buyer pain points audience who buys`, serpApiKey, 8)
     ]);
 
     const fallback = buildFallback(query, { demand, pricing, suppliers, audience });
