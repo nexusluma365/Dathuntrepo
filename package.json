@@ -1,5 +1,9 @@
 {
-  "name": "dathuntrepo",
-  "private": true,
-  "type": "module"
+  "name": "datahunt",
+  "version": "1.0.0",
+  "description": "DataHunt — Live Market Intelligence Scanner",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  }
 }

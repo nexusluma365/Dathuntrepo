@@ -281,6 +281,12 @@ html,body{height:100%;background:
 .title-row{display:flex;align-items:center;gap:10px}
 .title-icon{color:var(--blue2)}
 .muted-block{background:var(--blue-pale);border-radius:14px;padding:12px 14px;font-size:12px;color:var(--txt2)}
+/* ERROR PANEL */
+.error-panel{background:var(--red-pale);border:1px solid rgba(220,38,38,.25);border-radius:20px;padding:20px 24px;margin-bottom:20px;display:none}
+.error-panel.visible{display:block}
+.ep-title{font-size:14px;font-weight:700;color:var(--red);margin-bottom:6px;display:flex;align-items:center;gap:7px}
+.ep-msg{font-size:12px;color:#7f1d1d;font-family:var(--mono);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.ep-hint{font-size:11px;color:var(--txt2);margin-top:10px;padding-top:10px;border-top:1px solid rgba(220,38,38,.15)}
 /* RESPONSIVE */
 @media(max-width:1100px){.stats-grid{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:1fr 1fr}.offer-grid{grid-template-columns:1fr 1fr}.feature-strip{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:820px){.sidebar{display:none}.main{margin-left:0}.topbar{padding:16px 18px;height:auto;align-items:flex-start;gap:14px;flex-direction:column}.tb-right{width:100%;flex-wrap:wrap}.search-box{min-width:0;flex:1}.stats-grid{grid-template-columns:1fr 1fr}.grid-2-1,.grid-1-1,.cta-row{grid-template-columns:1fr}.init-panel{padding:28px 20px}}
@@ -371,6 +377,12 @@ html,body{height:100%;background:
         </div>
       </div>
 
+      <!-- ERROR PANEL -->
+      <div class="error-panel" id="errorPanel">
+        <div class="ep-title">⚠ Scan Error</div>
+        <div class="ep-msg" id="errorMsg"></div>
+        <div class="ep-hint">Check your <strong>SERPAPI_KEY</strong> and <strong>ANTHROPIC_API_KEY</strong> in Vercel → Project Settings → Environment Variables. After adding them, redeploy.</div>
+      </div>
       <!-- RESULTS -->
       <div class="results-area" id="resultsArea"></div>
     </div>
@@ -489,9 +501,12 @@ async function startScan(){
   document.getElementById('scanOverlay').classList.add('active');
   document.getElementById('scanLog').innerHTML = '';
   document.getElementById('initState').style.display = 'none';
+  // Clear any previous error
+  var ep = document.getElementById('errorPanel');
+  if(ep) ep.classList.remove('visible');
 
   try {
-    setProgress(8, 'Connecting DataHunt Engine…', 'Preparing live Google-powered market scan', 'globe');
+    setProgress(8, 'Connecting DataHunt Engine…', 'Preparing live SerpApi-powered market scan', 'globe');
     log('Launching DataHunt scan for: ' + query, 'hi');
     setProgress(22, 'Searching Live Demand…', 'Collecting search, pricing, competitor, and supplier signals', 'search');
     log('Querying backend endpoint /api/scan-market…');
@@ -533,6 +548,16 @@ async function startScan(){
     log('ERROR: ' + err.message, 'err');
     setProgress(0, 'Scan Failed', err.message.slice(0,80), 'refresh');
     document.getElementById('scanBtn').disabled = false;
+
+    // Show visible error panel
+    var ep = document.getElementById('errorPanel');
+    var em = document.getElementById('errorMsg');
+    if(ep && em){
+      em.textContent = err.message;
+      ep.classList.add('visible');
+      document.getElementById('initState').style.display = 'none';
+    }
+
     setTimeout(function(){
       document.getElementById('scanOverlay').classList.remove('active');
     }, 3000);
